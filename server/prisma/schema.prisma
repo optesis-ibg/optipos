@@ -1,0 +1,230 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Company {
+  id        Int      @id @default(autoincrement())
+  name      String   @db.VarChar(255)
+  code      String   @unique @db.VarChar(50)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  users       User[]
+  cities      City[]
+  sites       Site[]
+  inspecteurs Inspecteur[]
+  categories  Category[]
+  questions   Question[]
+  inspections Inspection[]
+  actifs      Actif[]
+  produits    Produit[]
+  controles   Controle[]
+  rolePerms   RolePermission[]
+
+  @@map("companies")
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  companyId    Int      @map("company_id")
+  prenom       String   @db.VarChar(100)
+  nom          String   @db.VarChar(100)
+  username     String   @unique @db.VarChar(100)
+  passwordHash String   @map("password_hash") @db.VarChar(255)
+  role         String   @default("inspecteur") @db.VarChar(50)
+  customPerms  Json     @default("{}") @map("custom_perms")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("users")
+}
+
+model City {
+  id        Int      @id @default(autoincrement())
+  companyId Int      @map("company_id")
+  createdBy Int?     @map("created_by")
+  name      String   @db.VarChar(255)
+  region    String   @default("") @db.VarChar(255)
+  pays      String   @default("") @db.VarChar(100)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  sites   Site[]
+
+  @@unique([companyId, name])
+  @@map("cities")
+}
+
+model Site {
+  id           Int       @id @default(autoincrement())
+  companyId    Int       @map("company_id")
+  createdBy    Int?      @map("created_by")
+  name         String    @db.VarChar(255)
+  addr         String    @default("") @db.Text
+  code         String    @default("") @db.VarChar(50)
+  tel          String    @default("") @db.VarChar(50)
+  cityId       Int?      @map("city_id")
+  gerantPrenom String    @default("") @map("gerant_prenom") @db.VarChar(100)
+  gerantNom    String    @default("") @map("gerant_nom") @db.VarChar(100)
+  dateContrat  DateTime? @map("date_contrat") @db.Date
+  typeGerant   String    @default("") @map("type_gerant") @db.VarChar(50)
+  inspecteurs  Json      @default("[]")
+  docs         Json      @default("[]")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  city    City?   @relation(fields: [cityId], references: [id], onDelete: SetNull)
+
+  @@map("sites")
+}
+
+model Inspecteur {
+  id         Int       @id @default(autoincrement())
+  companyId  Int       @map("company_id")
+  createdBy  Int?      @map("created_by")
+  prenom     String    @db.VarChar(100)
+  nom        String    @db.VarChar(100)
+  dateEntree DateTime? @map("date_entree") @db.Date
+  stations   Json      @default("[]")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("inspecteurs")
+}
+
+model Category {
+  id        Int     @id @default(autoincrement())
+  companyId Int     @map("company_id")
+  createdBy Int?    @map("created_by")
+  name      String  @db.VarChar(100)
+  scored    Boolean @default(true)
+  orderIdx  Int     @default(0) @map("order_idx")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, name])
+  @@map("categories")
+}
+
+model Question {
+  id        Int     @id @default(autoincrement())
+  companyId Int     @map("company_id")
+  createdBy Int?    @map("created_by")
+  cat       String  @db.VarChar(100)
+  text      String  @db.Text
+  type      String  @default("selection") @db.VarChar(50)
+  scored    Boolean @default(true)
+  maxScore  Int     @default(10) @map("max_score")
+  opts      Json    @default("[]")
+  formula   String? @db.VarChar(255)
+  minVal    Int?    @map("min_val")
+  maxVal    Int?    @map("max_val")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("questions")
+}
+
+model Inspection {
+  id         BigInt   @id
+  companyId  Int      @map("company_id")
+  createdBy  Int?     @map("created_by")
+  site       String   @db.VarChar(255)
+  date       DateTime @db.Date
+  inspector  String   @default("") @db.VarChar(255)
+  gpsCoords  String   @default("") @map("gps_coords") @db.VarChar(100)
+  headerSig  String   @default("") @map("header_sig") @db.Text
+  answers    Json     @default("{}")
+  totalScore Int      @default(0) @map("total_score")
+  totalMax   Int      @default(0) @map("total_max")
+  pct        Int      @default(0)
+  questions  Json     @default("[]")
+  cats       Json     @default("[]")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("inspections")
+}
+
+model Actif {
+  id               BigInt    @id
+  companyId        Int       @map("company_id")
+  createdBy        Int?      @map("created_by")
+  site             String    @default("") @db.VarChar(255)
+  categorie        String    @default("") @db.VarChar(50)
+  type             String    @default("") @db.VarChar(100)
+  nom              String    @db.VarChar(255)
+  marque           String    @default("") @db.VarChar(100)
+  serie            String    @default("") @db.VarChar(100)
+  produit          String    @default("") @db.VarChar(255)
+  cuveRattachee    String    @default("") @map("cuve_rattachee") @db.VarChar(255)
+  pompesRattachees Json      @default("[]") @map("pompes_rattachees")
+  indexInitial     String    @default("") @map("index_initial") @db.VarChar(50)
+  indexActuel      String    @default("") @map("index_actuel") @db.VarChar(50)
+  codeBarre        String    @default("") @map("code_barre") @db.VarChar(100)
+  dateMaintenance  DateTime? @map("date_maintenance") @db.Date
+  statut           String    @default("actif") @db.VarChar(50)
+  notes            String    @default("") @db.Text
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("actifs")
+}
+
+model Produit {
+  id          BigInt  @id
+  companyId   Int     @map("company_id")
+  createdBy   Int?    @map("created_by")
+  nom         String  @db.VarChar(255)
+  categorie   String  @default("") @db.VarChar(50)
+  unite       String  @default("litre") @db.VarChar(50)
+  description String  @default("") @db.Text
+  sites       Json    @default("[]")
+  actif       Boolean @default(true)
+  prix        Json    @default("[]")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("produits")
+}
+
+model Controle {
+  id           BigInt   @id
+  companyId    Int      @map("company_id")
+  createdBy    Int?     @map("created_by")
+  site         String   @default("") @db.VarChar(255)
+  dateControle DateTime @map("date_controle") @db.Date
+  notes        String   @default("") @db.Text
+  statut       String   @default("en_cours") @db.VarChar(50)
+  pompes       Json     @default("[]")
+  cuves        Json     @default("[]")
+  recette      Json     @default("[]")
+  paiements    Json     @default("{}")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("controles")
+}
+
+model RolePermission {
+  companyId Int     @map("company_id")
+  role      String  @db.VarChar(50)
+  key       String  @db.VarChar(100)
+  lire      Boolean @default(false)
+  creer     Boolean @default(false)
+  modifier  Boolean @default(false)
+  supprimer Boolean @default(false)
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@id([companyId, role, key])
+  @@map("role_permissions")
+}
